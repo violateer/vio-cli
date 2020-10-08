@@ -5,16 +5,7 @@ const Inquirer = require('inquirer')
 const fetchRepoList = async () => {
     const {
         data
-    } = await axios.get("https://api.github.com/orgs/vio-cli/repos", {
-        params: null,
-        headers: {
-            'User-Agent': 'Mozilla/5.0',
-            'Authorization': 'token 91a4c6cd68960a1d07c09c01e60d5d8a5f361d31',
-            'Content-Type': 'application/json',
-            'method': 'GET',
-            'Accept': 'application/json'
-        }
-    })
+    } = await axios.get("https://api.github.com/orgs/vio-cli/repos")
     return data
 }
 
@@ -36,16 +27,7 @@ const waitFnLoading = (fn, message) => async (...args) => {
 const fetchTagList = async (repo) => {
     const {
         data
-    } = await axios.get(`https://api.github.com/repos/vio-cli/${repo}/tags`, {
-        params: null,
-        headers: {
-            'User-Agent': 'Mozilla/5.0',
-            'Authorization': 'token 91a4c6cd68960a1d07c09c01e60d5d8a5f361d31',
-            'Content-Type': 'application/json',
-            'method': 'GET',
-            'Accept': 'application/json'
-        }
-    })
+    } = await axios.get(`https://api.github.com/repos/vio-cli/${repo}/tags`)
     return data
 }
 

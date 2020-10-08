@@ -34,7 +34,6 @@ Reflect.ownKeys(mapActions).forEach(action => {
                 console.log(mapActions[action].description);
             } else {
                 // 截取命令
-                // vio-cli create project-name
                 require(path.resolve(__dirname, action))(...process.argv.slice(3))
             }
         })
