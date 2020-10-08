@@ -2,6 +2,7 @@ const {
     version
 } = require('./constantes')
 const program = require('commander');
+const path = require('path')
 // 配置3个指令命令
 const mapActions = {
     create: {
@@ -32,7 +33,9 @@ Reflect.ownKeys(mapActions).forEach(action => {
                 // 访问不到对应的命令
                 console.log(mapActions[action].description);
             } else {
-                console.log(action);
+                // 截取命令
+                // vio-cli create project-name
+                require(path.resolve(__dirname, action))(...process.argv.slice(3))
             }
         })
 })
