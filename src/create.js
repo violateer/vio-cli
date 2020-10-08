@@ -1,6 +1,17 @@
 const axios = require('axios')
 const ora = require('ora')
 const Inquirer = require('inquirer')
+const path = require('path')
+const {
+    downloadDirectory
+} = require('./constantes')
+const {
+    promisify
+} = require('util')
+let downLoadGitRepo = require('download-git-repo')
+downLoadGitRepo = promisify(downLoadGitRepo)
+let ncp = require('ncp')
+ncp = promisify(ncp)
 //获取仓库模板信息
 const fetchRepoList = async () => {
     const {
@@ -31,8 +42,19 @@ const fetchTagList = async (repo) => {
     return data
 }
 
-module.exports = async () => {
-    // 获取项目模板
+// 下载项目
+const download = async (repo, tag) => {
+    let api = `vio-cli/${repo}`
+    if (tag) {
+        api += `#${tag}`
+    }
+    const dist = `${downloadDirectory}/${repo}`
+    await downLoadGitRepo(api, dist)
+    return dist
+}
+
+module.exports = async (proname) => {
+    // 1.获取项目模板
     let repos = await waitFnLoading(fetchRepoList, 'fetching template...')()
     repos = repos.map(item => item.name)
     const {
@@ -43,7 +65,7 @@ module.exports = async () => {
         message: 'please choose a template to create a project', // 提示信息
         choices: repos // 选项
     })
-    // 获取对应版本号
+    // 2.获取对应版本号
     let tags = await waitFnLoading(fetchTagList, 'fetching tags...')(repo)
     tags = tags.map(item => item.name)
     // 选择版本号
@@ -55,5 +77,7 @@ module.exports = async () => {
         message: 'please choose a tag to create a project',
         choices: tags
     })
-    console.log(repo, tag);
+    // 3.下载项目 返回一个临时的存放目录
+    const result = await waitFnLoading(download, 'download template...')(repo, tag)
+    await ncp(result, path.resolve(proname))
 }
