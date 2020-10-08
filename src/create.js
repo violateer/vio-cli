@@ -2,6 +2,8 @@ const axios = require('axios')
 const ora = require('ora')
 const Inquirer = require('inquirer')
 const path = require('path')
+const fs = require('fs')
+const MetalSmith = require('metalsmith')
 const {
     downloadDirectory
 } = require('./constantes')
@@ -12,6 +14,11 @@ let downLoadGitRepo = require('download-git-repo')
 downLoadGitRepo = promisify(downLoadGitRepo)
 let ncp = require('ncp')
 ncp = promisify(ncp)
+let {
+    render
+} = require('consolidate').ejs
+render = promisify(render)
+
 //获取仓库模板信息
 const fetchRepoList = async () => {
     const {
@@ -79,5 +86,55 @@ module.exports = async (proname) => {
     })
     // 3.下载项目 返回一个临时的存放目录
     const result = await waitFnLoading(download, 'download template...')(repo, tag)
-    await ncp(result, path.resolve(proname))
+    if (!fs.existsSync(path.join(result, 'ask.js'))) {
+        await ncp(result, path.resolve(proname))
+    } else {
+        // 复杂模板
+        // 需要用户选择  选择后编译模板
+        await new Promise((resolve, reject) => {
+            // 如果传入路径  就会默认遍历当前文件夹下的src文件
+            MetalSmith(__dirname)
+                .source(result)
+                .destination(path.resolve(proname)) // 编译要去的地方
+                .use(async (files, metal, done) => {
+                    // files是所有的文件
+                    // 拿到提前配置好的信息  传下去渲染
+                    const args = require(path.join(result, 'ask.js'))
+
+                    // 拿到后让用户选择  返回选择的信息
+                    const obj = await Inquirer.prompt(args)
+
+                    // 将获取的信息合并传入下一个中间件use
+                    const meta = metal.metadata()
+                    Object.assign(meta, obj)
+
+                    // 删除ask.js
+                    delete files["ask.js"]
+                    done()
+                })
+                .use((files, metal, done) => {
+                    // 根据用户信息渲染模板
+                    const obj = metal.metadata()
+                    Reflect.ownKeys(files).forEach(async (file) => {
+                        if (file.includes("js") || file.includes("json")) {
+                            // 文件内容
+                            let content = files[file].contents.toString()
+                            // 判断是否为模板
+                            if (content.includes("<%")) {
+                                content = await render(content, obj)
+                                // 渲染
+                                files[file].contents = Buffer.from(content)
+                            }
+                        }
+                    })
+                    done()
+                }).build(err => {
+                    if (err) {
+                        reject()
+                    } else {
+                        resolve()
+                    }
+                })
+        })
+    }
 }
